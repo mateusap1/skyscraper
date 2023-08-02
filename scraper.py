@@ -4,7 +4,7 @@ import base64
 import requests
 
 from requests import RequestException
-from bs4 import BeautifulSoup, NavigableString
+from bs4 import BeautifulSoup, NavigableString, Tag
 
 
 class Scraper(object):
@@ -15,10 +15,10 @@ class Scraper(object):
 
     def url_file(self, url: str):
         # Encode the url to base64
-        encoded_bytes = base64.b64encode(url.encode('utf-8'))
-        encoded_url = encoded_bytes.decode('utf-8')
+        encoded_bytes = base64.b64encode(url.encode("utf-8"))
+        encoded_url = encoded_bytes.decode("utf-8")
 
-        return f'{self.current_path}/cache/{encoded_url}.html'
+        return f"{self.current_path}/cache/{encoded_url}.html"
 
     def load(self, url: str):
         if os.path.exists(self.url_file(url)):
@@ -48,10 +48,10 @@ class Scraper(object):
             html = response.text
 
         return html
-    
+
     def parse(self, html: str):
         raise NotImplementedError("parse function not implemented")
-    
+
 
 class NovoCanticoScraper(Scraper):
     def parse(self, html_content: str):
@@ -64,33 +64,27 @@ class NovoCanticoScraper(Scraper):
         # Find the parent of the audio tag
         parent_tag = audio_tag.find_parent()
 
-        # Initialize variables
+        # Find all the tags between audio and the next bold tag within their parent
         between_tags = False
-        result_text = []
-        last_parent = -72
-
-        # Iterate over all descendants of the parent tag
-        for descendant in parent_tag.descendants:
-            if descendant == audio_tag:
+        last_was_breakline = False
+        result = [[]]
+        for tag in parent_tag:
+            if tag == audio_tag:
                 between_tags = True
                 continue
 
-            if descendant.parent.name == "audio":
-                continue
+            elif between_tags and (tag.name == 'b' or (tag.find("b") not in [-1, None])):
+                break
 
-            if between_tags:
-                if isinstance(descendant, NavigableString):
-                    if descendant.strip() == 'Seu navegador não suporta o elemento audio':
-                        continue
+            elif between_tags and tag.text is not None:
+                if tag.text == "\n" and last_was_breakline:
+                    if result[-1] != []:
+                        result.append([])
+                    last_was_breakline = False
+                elif tag.text == "\n":
+                    last_was_breakline = True
+                else:
+                    result[-1].append(tag.text.strip())
+                    last_was_breakline = False
 
-                    if last_parent != descendant.parent:
-                        last_parent = descendant.parent
-                        result_text.append([])
-                    
-                    stripped = descendant.strip()
-                    if stripped:  # check if the string is not empty or whitespace
-                        result_text[-1].append(stripped)
-                elif descendant.name == 'b' or descendant.find('b') is not None:
-                    break
-
-        return result_text
+        return result
