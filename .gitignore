@@ -1,5 +1,6 @@
 cache/*
 __pycache__
+assets/*
 results/*
 results_backup/*
 .vscode

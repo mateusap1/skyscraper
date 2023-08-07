@@ -3,6 +3,7 @@ import time
 import base64
 import requests
 
+from typing import List
 from requests import RequestException
 from bs4 import BeautifulSoup, NavigableString, Tag
 
@@ -56,35 +57,31 @@ class Scraper(object):
 class NovoCanticoScraper(Scraper):
     def parse(self, html_content: str):
         # Parse the HTML.
-        soup = BeautifulSoup(html_content, 'html.parser')
+        soup = BeautifulSoup(html_content, "html.parser")
 
-        # Find the audio tag
-        audio_tag = soup.find('audio')
+        titles: List[Tag] = soup.find_all("h2", attrs={"class": "storytitle"})
+        hinos = []
 
-        # Find the parent of the audio tag
-        parent_tag = audio_tag.find_parent()
-
-        # Find all the tags between audio and the next bold tag within their parent
-        between_tags = False
-        last_was_breakline = False
-        result = [[]]
-        for tag in parent_tag:
-            if tag == audio_tag:
-                between_tags = True
+        for title in titles:
+            children = list(title.children)
+            if not len(children) == 1:
+                print(f"Error: More than one children for element {title}")
                 continue
 
-            elif between_tags and (tag.name == 'b' or (tag.find("b") not in [-1, None])):
-                break
+            hino = children[0].text
+            estrofes = []
 
-            elif between_tags and tag.text is not None:
-                if tag.text == "\n" and last_was_breakline:
-                    if result[-1] != []:
-                        result.append([])
-                    last_was_breakline = False
-                elif tag.text == "\n":
-                    last_was_breakline = True
-                else:
-                    result[-1].append(tag.text.strip())
-                    last_was_breakline = False
+            lyrics_container = title.findNext("div")
+            for element in lyrics_container.children:
+                if element.text.startswith("Link"):
+                    break
 
-        return result
+                if element.text.strip():
+                    estrofes.append(element.text.strip().split("\n"))
+
+            hinos.append({
+                "titulo": hino,
+                "estrofes": estrofes
+            })
+
+        return hinos

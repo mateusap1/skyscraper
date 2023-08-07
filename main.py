@@ -6,31 +6,18 @@ import csv
 
 
 def main():
-    # scraper = Scraper(min_delay_for_request_us=500_000)
     scraper = NovoCanticoScraper(min_delay_for_request_us=500_000)
 
-    with open("assets/hinos.csv", mode="r", newline="") as file:
-        reader = csv.reader(file)
+    for i in range(1, 38):
+        html = scraper.load(
+            f"https://crentebatista.wordpress.com/category/novo-cantico/page/{i}/"
+        )
 
-        for i, (hino, url) in enumerate(reader):
-            if i < 80:
-                continue
-
-            if i > 90:
-                break
-
-            if i == 0:
-                continue
-
-            html = scraper.load(url)
-            result = scraper.parse(html)
-            print(hino, result)
-
-            # with open(f"results/{i}.json", "w") as file:
-            #     file.write(json.dumps({
-            #         "nome": hino,
-            #         "estrofes": find_stanzas_and_verses(html)
-            #     }))
+        hinos = scraper.parse(html)
+        for hino in hinos:
+            title = hino["titulo"].lower().replace(" ", "_").replace("\u00a0", "_")
+            with open(f"assets/{title}.json", "w") as file:
+                file.write(json.dumps(hino))
 
 
 if __name__ == "__main__":
