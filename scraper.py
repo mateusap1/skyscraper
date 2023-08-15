@@ -79,9 +79,54 @@ class NovoCanticoScraper(Scraper):
                 if element.text.strip():
                     estrofes.append(element.text.strip().split("\n"))
 
-            hinos.append({
-                "titulo": hino,
-                "estrofes": estrofes
-            })
+            hinos.append({"titulo": hino, "estrofes": estrofes})
+
+        return hinos
+
+
+class HarpaCristaScraper(Scraper):
+    def parse_links(self, html_content: str):
+        # Parse the HTML.
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        div = soup.find(
+            "div", attrs={"class": "q-list q-list--bordered", "data-v-0f5f8f17": ""}
+        )
+
+        links = soup.find_all("a", attrs={"href": "/hino/1"})
+        print(links)
+        # div = first_link.parent
+
+        # links: List[Tag] = div.find_all("a", attrs={"data-v-0f5f8f17": ""})
+
+        # hinos = []
+        # for link in links:
+        #     print(link)
+
+    def parse(self, html_content: str):
+        # Parse the HTML.
+        soup = BeautifulSoup(html_content, "html.parser")
+
+        titles: List[Tag] = soup.find_all("h2", attrs={"class": "storytitle"})
+        hinos = []
+
+        for title in titles:
+            children = list(title.children)
+            if not len(children) == 1:
+                print(f"Error: More than one children for element {title}")
+                continue
+
+            hino = children[0].text
+            estrofes = []
+
+            lyrics_container = title.findNext("div")
+            for element in lyrics_container.children:
+                if element.text.startswith("Link"):
+                    break
+
+                if element.text.strip():
+                    estrofes.append(element.text.strip().split("\n"))
+
+            hinos.append({"titulo": hino, "estrofes": estrofes})
 
         return hinos
